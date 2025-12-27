@@ -441,8 +441,8 @@ def create_market_comparison_chart(
                     name='其他人买入',
                     marker=dict(
                         size=4,
-                        color='lightgreen',
-                        opacity=0.3,
+                        color='#228B22',  # 森林绿（更深）
+                        opacity=0.5,
                         symbol='circle'
                     ),
                     showlegend=True
@@ -460,8 +460,8 @@ def create_market_comparison_chart(
                     name='其他人卖出',
                     marker=dict(
                         size=4,
-                        color='lightcoral',
-                        opacity=0.3,
+                        color='#DC143C',  # 深红色
+                        opacity=0.5,
                         symbol='circle'
                     ),
                     showlegend=True
