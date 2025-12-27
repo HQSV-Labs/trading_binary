@@ -9,13 +9,15 @@
 ```
 trading_binary/
 ├── docs/
-│   └── strategy.md          # 策略文档
+│   ├── strategy.md          # 策略文档
+│   └── ADDRESS_TRACKING.md  # 地址追踪功能文档
 ├── src/
 │   ├── core/                # 核心数学模型
 │   │   └── position.py      # 持仓成本跟踪和判定逻辑
 │   ├── market/              # 市场数据
 │   │   ├── polymarket_api.py # Polymarket API 客户端
-│   │   └── event_detector.py # 事件检测器（BTC/ETH 15分钟市场）
+│   │   ├── event_detector.py # 事件检测器（BTC/ETH 15分钟市场）
+│   │   └── address_tracker.py # 地址追踪模块 🆕
 │   ├── monitor/             # 监控模块
 │   │   └── price_monitor.py # 高频价格监控
 │   ├── execution/           # 执行模块
@@ -23,8 +25,11 @@ trading_binary/
 │   ├── rebalancing/         # 平衡模块
 │   │   └── balancer.py      # 动态平衡算法
 │   └── dashboard/           # 监控面板
-│       └── display.py       # 实时 Dashboard
+│       ├── display.py       # 实时 Dashboard
+│       └── address_tracking.py # 地址追踪 Dashboard 🆕
 ├── main.py                  # 主程序入口
+├── dashboard_address_tracking.py # 地址追踪 Dashboard 应用 🆕
+├── example_address_tracking.py   # 地址追踪使用示例 🆕
 ├── test_strategy.py         # 策略测试用例
 ├── requirements.txt        # Python 依赖
 ├── .env.example            # 环境变量示例
@@ -85,6 +90,18 @@ python test_strategy.py
 streamlit run dashboard.py
 # 然后在浏览器中打开 http://localhost:8501
 
+# 🆕 运行地址追踪 Dashboard
+./run_address_tracking.sh
+# 或
+streamlit run dashboard_address_tracking.py --server.port 8502
+# 然后在浏览器中打开 http://localhost:8502
+
+# 🔥 运行市场分析 Dashboard（新）
+./run_market_analysis.sh
+# 或
+streamlit run dashboard_market_analysis.py --server.port 8503
+# 然后在浏览器中打开 http://localhost:8503
+
 # 从 URL 获取 Condition ID
 python get_condition_id.py "https://polymarket.com/event/btc-updown-15m-1766510100"
 
@@ -95,6 +112,9 @@ python main.py
 python main.py --demo
 # 或
 python main.py -d
+
+# 🆕 运行地址追踪示例
+python example_address_tracking.py
 ```
 
 ### 退出虚拟环境
@@ -106,12 +126,122 @@ deactivate
 
 ## 功能说明
 
+### 主要交易功能
+
 系统会自动：
 1. **检测市场**：搜索并筛选 BTC/ETH 15分钟涨跌预测市场（或使用演示数据）
 2. **市场选择**：显示可用市场列表，用户可选择要监控的市场
 3. **监控价格**：实时监控订单簿，当价格进入 0.35-0.50 区间时触发买入
 4. **模拟交易**：根据准入判定公式自动模拟下单（不真实下单）
 5. **利润锁定**：满足利润锁定条件时自动停止交易
+
+## 🔥 市场分析功能 🆕🆕
+
+**全新分析逻辑**：搜索市场 → 获取所有交易 → 标记目标地址
+
+### 功能特点
+- 🔥 **从交易中提取市场**：从地址的最近交易中提取15分钟市场（支持12月最新市场！）
+- 💰 **多币种支持**：BTC, ETH, SOL, XRP 的15分钟市场
+- 📊 **获取所有交易**：分页获取市场的全部交易历史
+- ⭐ **标记目标地址**：在所有交易中高亮显示目标地址的交易
+- 📈 **完整分析**：交易统计、价格趋势、交易量分布
+- 📥 **导出数据**：导出包含标记的完整交易数据
+
+### 与原功能的区别
+
+| 功能 | 地址追踪（原） | 市场分析（新） |
+|------|---------------|---------------|
+| **入口** | 输入地址 | 搜索市场 |
+| **数据范围** | 该地址的所有市场 | 该市场的所有交易者 |
+| **适用场景** | 追踪某个地址的活动 | 分析特定市场的全部情况 |
+| **标记方式** | 所有数据都是该地址的 | 在所有交易中标记目标地址 |
+
+### 使用方法
+
+**启动 Dashboard**：
+```bash
+./run_market_analysis.sh
+```
+
+**步骤**：
+1. 搜索市场（BTC 15分钟 或 自定义关键词）
+2. 选择市场状态（已关闭 或 活跃）
+3. 从列表中选择要分析的市场
+4. （可选）输入目标地址进行标记
+5. 获取并分析所有交易
+6. 查看图表和统计，导出数据
+
+详细指南：[市场分析功能使用指南](MARKET_ANALYSIS_GUIDE.md)
+
+---
+
+### 🆕 地址追踪功能
+
+新增的地址追踪功能允许你：
+1. **追踪任意地址**：输入以太坊地址，查看其在 Polymarket 的交易历史
+2. **交易统计**：自动分析买卖比例、交易金额、涉及市场等
+3. **市场对比**：查看特定市场的所有交易，与其他交易者对比
+4. **实时数据**：通过 Polymarket 公开 API 获取最新交易数据
+5. **📊 图表可视化**：按市场显示交易的时间序列图表（买入/卖出价格和数量）
+6. **🎛️ 灵活配置**：选择交易数量（50-1000笔）
+7. **🟢 市场筛选**：显示市场状态并筛选活跃市场
+8. **🔥 分页获取**：突破10000笔限制，获取市场所有交易（适合已关闭市场）
+9. **⭐ 交易标记**：在市场全部交易中自动标记追踪地址的交易 🆕
+
+#### 🔥 分页获取所有交易（新功能）
+
+**解决问题**：
+- Polymarket API 单次最多返回 10,000 笔交易
+- 热门市场可能有数万笔交易，无法一次性获取
+
+**功能特点**：
+- ✅ 自动分批请求，突破10,000笔限制
+- ✅ 实时显示获取进度
+- ✅ 可选设置上限（避免数据过多）
+- ✅ 适合已关闭市场的完整数据分析
+
+**使用方法**：
+1. 在 Dashboard 中选择市场
+2. 选择"🔥 获取全部"模式
+3. 等待分页获取完成（1-5分钟，取决于市场大小）
+4. 查看完整的市场交易数据
+
+**使用示例**：
+```bash
+# 启动地址追踪 Dashboard
+./run_address_tracking.sh
+
+# 在侧边栏选择 "📊 图表分析模式" 查看可视化图表
+
+# 测试分页功能
+python test_pagination.py
+
+# 或查看使用示例
+python example_address_tracking.py
+
+# 测试图表功能
+python test_chart_visualization.py
+```
+
+#### ⭐ 交易标记功能（新）
+
+在查看市场全部交易时，自动标记当前追踪地址的交易：
+- ⭐ **图表中视觉标记**：你的交易用更大的marker和加粗边框
+- ⭐ **统计信息增强**：显示"你的交易"数量
+- ⭐ **CSV导出标记**：导出数据包含"是否为追踪地址"列
+- ⭐ **快速识别**：在上千笔交易中一眼找到自己的交易
+
+详细文档：
+- [地址追踪功能文档](docs/ADDRESS_TRACKING.md)
+- [🔥 分页获取功能](docs/PAGINATION_FEATURE.md) - 突破10000笔限制
+- [⭐ 交易标记功能](HIGHLIGHT_TRACKING_UPDATE.md) - 标记追踪地址交易 🆕
+- [功能总结](ADDRESS_TRACKING_SUMMARY.md)
+- [📊 图表功能指南](CHART_FEATURE_GUIDE.md)
+- [V1.3 功能更新](FEATURE_UPDATE_V1.3.md) - 交易数量选择 & 市场筛选
+- [V1.4 筛选改进](FILTER_IMPROVEMENT.md) - 可查看已关闭市场
+- [V1.5 市场数据导出](MARKET_DATA_EXPORT.md) - 获取市场全量数据（最多10000笔）& CSV导出
+- [V1.6 分页获取](PAGINATION_UPDATE.md) - 突破10000笔限制
+- [V1.7 交易标记](HIGHLIGHT_TRACKING_UPDATE.md) - 标记追踪地址
 6. **实时可视化**：Dashboard 实时显示价格图表、持仓、交易历史、市场行情、执行参数和交易日志
 
 ### 演示模式
